@@ -8,16 +8,51 @@ import time
 import random
 import math
 
-class Enemy():
-    def __init__(self, x, y, sx, sy):
+class Ball():
+    _con_size = 50
+    _bg_w = 0
+    _bg_h = 0
+
+    def __init__(self, x, y, r):
+
+        # 좌표
         self.x = x
         self.y = y
-        self.sx = 5
+        # 속도
+        self.sx = 5 if random.randrange(1,3) == 1 else -5
+
         self.sy = 0
-        self.r = 100
+        # 지름
+        self.r = r
+        # 상태
         self.is_touched = False
 
-    def drawSelf(self, qp):
+    def move(self):
+        """볼의 이동 값을 구한다."""
+        # 볼이 움직일 수 있는 값을 구한다
+        end_of_ww = (self._bg_w - self.r)
+        end_of_wh = (self._bg_h - self.r)
+
+        # x 좌표값 검사
+        if self.x >= end_of_ww or self.x < 0:
+            self.sx *= -1 # 음양수 토글
+
+        # y 좌표값 검사
+        if self.y >= end_of_wh:
+            self.y = end_of_wh
+            self.sy *= -1
+        elif self.y <= 0:
+            self.y = 0
+            self.sy *= -1
+        else:
+            self.sy += 0.1
+
+        self.x += self.sx
+        self.y += self.sy
+
+
+    def draw(self, qp):
+        # 원을 그리는 함수
         if self.is_touched:
             pen = QtGui.QPen(QtCore.Qt.red, 2, QtCore.Qt.SolidLine)
         else:
@@ -36,84 +71,60 @@ class Form(QtWidgets.QWidget):
         self.mouse_y = 0
         self.setMouseTracking(True)
 
-        self.init_enemies()
+        self.init_objects()
 
         self.rt = QtCore.QBasicTimer()
         self.rt.start(10, self)
 
 
-    def init_enemies(self):
+    def init_objects(self):
+        self.ww = self.width()
+        self.wh = self.height()
+        Ball._bg_w = self.ww
+        Ball._bg_h = self.wh
+
         self.e = []
 
-        for i in range(1, random.randrange(1,5)):
-        # for i in range(1, 2):
-            # x = random.randrange(0, 639)
-            # y = random.randrange(0, 479)
-            x = 200
-            y = 0
-            sr = random.randrange(20, 50)
+        for i in range(1, random.randrange(2,7)):
+            r = random.randrange(1, 4) * Ball._con_size
+            x = random.randrange(0, self.ww - r)
+
+            y = random.randrange(1, ((self.wh - r) - 100))
+
             self.e.append(
-                Enemy(x, y, sr, sr)
+                Ball(x, y, r)
             )
 
     def keyPressEvent(self, QKeyEvent):
         if QKeyEvent.key() == QtCore.Qt.Key_Escape:
-            self.init_enemies()
+            self.init_objects()
 
     def timerEvent(self, e):
-        # self.checkCrash()
         self.ball_moving()
         self.repaint()
+
 
     def mouseMoveEvent(self, QMouseEvent):
         self.mouse_x = QMouseEvent.x()
         self.mouse_y = QMouseEvent.y()
 
+
     def ball_moving(self):
         for b in self.e:
-            if b.y >= 380:
-                b.y = 380
-                b.sy = -(b.sy)
-            if b.x >= 540 or b.x < 0:
-                b.sx = -(b.sx)
-
-            b.sy = b.sy + 0.2
-            b.x = b.x + b.sx
-            b.y = b.y + b.sy
-
-
-    # def checkCrash(self):
-    #     mx = self.mouse_x
-    #     my = self.mouse_y
-    #
-    #
-    #     e_cnt = len(self.e)
-    #     for i in range(0, e_cnt):
-    #         z = (abs(mx - ((self.e[i].x) + (self.e[i].sx /2))) ** 2) + \
-    #             (abs(my - ((self.e[i].y) + (self.e[i].sx /2))) ** 2)
-    #         z = math.sqrt(z)
-    #
-    #         if z < ((self.e[i].sx / 2) + 50):
-    #             self.e[i].is_touched = True
-    #         else:
-    #             self.e[i].is_touched = False
+            b.move()
 
 
     def paintEvent(self, QPaintEvent):
         qp = QtGui.QPainter()
         qp.begin(self)
         self.drawInfo(QPaintEvent, qp)
-        # self.drawMouse(QPaintEvent, qp)
-        self.drawEnemies(QPaintEvent, qp)
+        self.draw_balls(QPaintEvent, qp)
         qp.end()
 
-    def drawEnemies(self, event, qp):
-        for e in self.e:
-            e.drawSelf(qp)
 
-    def drawMouse(self, event, qp):
-        qp.setPen(QtGui.QColor('black'))
-        qp.drawEllipse(self.mouse_x - 50, self.mouse_y - 50, 100, 100)
+    def draw_balls(self, event, qp):
+        for e in self.e:
+            e.draw(qp)
 
 
     def drawInfo(self, event, qp):
